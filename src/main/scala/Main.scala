@@ -1,9 +1,9 @@
 package lab.scala.lab8
 
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.SparkSession.setActiveSession
-import org.apache.spark.sql.functions.{col, month, sqrt, year}
-import org.apache.spark.sql.types.{DateType, DoubleType, StringType, StructField, StructType}
+import org.apache.spark.sql.functions.{abs, avg, col, count, max, min, sqrt, sum}
+import org.apache.spark.sql.types.{DoubleType, StringType, StructField, StructType}
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -42,25 +42,60 @@ object Main {
           col("windspeed").cast(DoubleType).as("windspeed")
     )
 
-    //Temperature & Humidity month averages
-    // We override datetime ignoring individual days in order to group our rows my individual months
+    /*Temperature & Humidity month averages
+    * We override datetime ignoring individual days in order to group our rows my individual months
+    */
     val valenciaMA = valenciaDF.withColumn("datetime", valenciaDF("datetime").substr(0,7))
       .groupBy("datetime")
       .avg("temp","humidity").sort("datetime")
-    val madridMA = madridDF.select("datetime","temp")
-          .groupBy(valenciaDF("datetime").substr(0,7))
-          .avg("temp","humidity")
-    //Wind averages
+      .sort("datetime")
+    val madridMA = madridDF.withColumn("datetime", madridDF("datetime").substr(0,7))
+      .groupBy("datetime")
+      .avg("temp","humidity")
+      .sort("datetime")
+
+    /*Wind averages
+     */
     val windAvgValencia = valenciaDF.withColumn("datetime", valenciaDF("datetime").substr(0, 7))
-      .groupBy("datetime").avg("windspeed")
-      .withColumn("vectorAvg",
-        valenciaDF("windspeed")
-//          .agg(
-          //Complete from here on
-      )
-    valenciaMA.printSchema()
-    valenciaMA.foreach(print)
-    print(valenciaMA)
-    print(madridMA)
+      .groupBy("datetime")
+      .agg(
+        avg("windspeed").as("windAverage"),
+        sqrt(sum("windspeed") / count("windspeed")).as("windVectorAvg")
+      ).sort("datetime")
+    val windAvgMadrid = madridDF.withColumn("datetime", madridDF("datetime").substr(0, 7))
+      .groupBy("datetime")
+      .agg(
+        avg("windspeed").as("windAverage"),
+        sqrt(sum("windspeed") / count("windspeed")).as("windVectorAvg")
+      ).sort("datetime")
+
+    /*Monthly min & max temp
+    */
+    val minMaxValencia = valenciaDF.withColumn("datetime", valenciaDF("datetime").substr(0, 7))
+      .groupBy("datetime")
+      .agg(
+        min("temp").as("tempMin"),
+        max("temp").as("tempMax")
+      ).sort("datetime")
+    val minMaxMadrid = madridDF.withColumn("datetime", madridDF("datetime").substr(0, 7))
+      .groupBy("datetime")
+      .agg(
+        min("temp").as("tempMin"),
+        max("temp").as("tempMax")
+      ).sort("datetime")
+
+    /*Differences in temperatures between costal and inner land city
+    * */
+    val reducedMDF = madridDF.select("datetime", "temp")
+      .withColumn("mtemp", col("temp"))
+      .withColumn("mDatetime", col("datetime"))
+    val reducedVDF = valenciaDF.select("datetime", "temp")
+      .withColumn("vtemp", col("temp"))
+      .withColumn("vDatetime", col("datetime"))
+
+    val joinedDF = reducedVDF.join(reducedMDF , col("vDatetime") === col("mDatetime") , "inner")
+      .withColumn("datetime", col("vDatetime").substr(0, 7))
+      .groupBy(col("datetime"))
+      .agg(abs(col("vtemp") - col("mtemp")).as("Difference") )
   }
 }
