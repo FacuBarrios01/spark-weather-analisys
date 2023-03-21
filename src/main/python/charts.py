@@ -18,7 +18,6 @@ def trimDates(df):
 
 def generateMAVChart():
     dfMDA = pd.read_csv('/home/facu/IdeaProjects/lab8-sbt/src/main/resources/output/madridMA/part-00000-26717868-9164-4b09-9ef8-0602105b7e93-c000.csv')
-    dfMDA = pd.read_csv('/home/facu/IdeaProjects/lab8-sbt/src/main/resources/output/madridMA/part-00000-26717868-9164-4b09-9ef8-0602105b7e93-c000.csv')
     dfVDA = pd.read_csv('/home/facu/IdeaProjects/lab8-sbt/src/main/resources/output/valenciaMA/part-00000-a4bf45ba-f859-4e2f-ac25-a2b16a509dd9-c000.csv')
     dfMDA = trimDates(dfMDA)
     dfVDA = trimDates(dfVDA)
